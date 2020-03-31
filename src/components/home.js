@@ -21,7 +21,7 @@ function Home(props) {
   const [timeseriesMode, setTimeseriesMode] = useState(false);
   const [stateHighlighted, setStateHighlighted] = useState(undefined);
   const [stateTimeSeries, setStateTimeSeries] = useState({});
-  const [resultSeries, setresultSeries] = useState([]);
+  const [resultSeries, setresultSeries] = useState({series: [], state: ''});
 
   useEffect(() => {
     if (fetched === false) {
@@ -118,7 +118,7 @@ function Home(props) {
       dateStr = date.format('YYYY-MM-DD');
     }
     console.log(state, stateTimeSeries[state], resultSeries);
-    setresultSeries(resultSeries);
+    setresultSeries({series: resultSeries, state: state});
   };
 
   return (
@@ -155,7 +155,8 @@ function Home(props) {
         />
         <TimeSeries
           key={'state'}
-          timeseries={resultSeries}
+          stateName={resultSeries.state}
+          timeseries={resultSeries.series}
           confirmedOnly={true}
           update={1}
           type={graphOption}
