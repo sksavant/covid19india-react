@@ -1,12 +1,14 @@
 import React, {useState, useEffect} from 'react';
 import axios from 'axios';
 import {formatDistance} from 'date-fns';
+import moment from 'moment';
 
 import Table from './table';
 import Level from './level';
 import MapExplorer from './mapexplorer';
 import TimeSeries from './timeseries';
 import Minigraph from './minigraph';
+// import RawData from './raw_data.json';
 
 function Home(props) {
   const [states, setStates] = useState([]);
@@ -16,8 +18,10 @@ function Home(props) {
   const [lastUpdated, setLastUpdated] = useState('');
   const [timeseries, setTimeseries] = useState([]);
   const [deltas, setDeltas] = useState([]);
-  const [timeseriesMode, setTimeseriesMode] = useState(true);
+  const [timeseriesMode, setTimeseriesMode] = useState(false);
   const [stateHighlighted, setStateHighlighted] = useState(undefined);
+  const [stateTimeSeries, setStateTimeSeries] = useState({});
+  const [resultSeries, setresultSeries] = useState([]);
 
   useEffect(() => {
     if (fetched === false) {
@@ -25,21 +29,52 @@ function Home(props) {
     }
   }, [fetched]);
 
+  useEffect(() => {
+    getTimeSeries(stateHighlighted);
+  }, [stateHighlighted]);
+
   const getStates = async () => {
     try {
-      const [response, stateDistrictWiseResponse] = await Promise.all([
+      const [response, stateDistrictWiseResponse, RawData] = await Promise.all([
         axios.get('https://api.covid19india.org/data.json'),
         axios.get('https://api.covid19india.org/state_district_wise.json'),
+        axios.get('https://api.covid19india.org/raw_data.json'),
       ]);
       setStates(response.data.statewise);
       setTimeseries(response.data.cases_time_series);
       setLastUpdated(response.data.statewise[0].lastupdatedtime);
       setDeltas(response.data.key_values[0]);
       setStateDistrictWiseData(stateDistrictWiseResponse.data);
+      calculateStatewiseTimeSeries(
+        RawData.data.raw_data,
+        response.data.statewise.slice(1).map((d) => d.state)
+      );
       setFetched(true);
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const calculateStatewiseTimeSeries = (data, states) => {
+    console.log(data);
+    const filteredData = data.filter((r) => r.dateannounced !== '');
+    const statewiseSeries = {};
+    filteredData.forEach((d) => {
+      const st = d.detectedstate;
+      if (statewiseSeries[st] === undefined) {
+        statewiseSeries[st] = {};
+      }
+      const date = moment(d.dateannounced, 'DD/MM/YYYY').format('YYYY-MM-DD');
+      if (statewiseSeries[st][date] === undefined) {
+        statewiseSeries[st][date] = 1;
+      } else {
+        statewiseSeries[st][date] += 1;
+      }
+    });
+    console.log(statewiseSeries);
+    console.log(states);
+    console.log(filteredData);
+    setStateTimeSeries(statewiseSeries);
   };
 
   const formatDate = (unformattedDate) => {
@@ -53,6 +88,37 @@ function Home(props) {
   const onHighlightState = (state, index) => {
     if (!state && !index) setStateHighlighted(null);
     else setStateHighlighted({state, index});
+  };
+
+  const getTimeSeries = (data) => {
+    if (data === undefined || data === null) {
+      return [];
+    }
+    const state = data.state.state;
+    const series = stateTimeSeries[state];
+    const resultSeries = [];
+    let total = 0;
+    let dateStr = '2020-01-30';
+    let date = moment(dateStr);
+    const today = moment().format('YYYY-MM-DD');
+    while (dateStr !== today) {
+      const num = series[dateStr] || 0;
+      total += num;
+      resultSeries.push({
+        dailyconfirmed: num,
+        dailydeceased: 0,
+        dailyrecovered: 0,
+        date: date.format('DD MMMM '),
+        totalconfirmed: total,
+        totaldeceased: 0,
+        totalrecovered: 0,
+      });
+
+      date = date.add(1, 'days');
+      dateStr = date.format('YYYY-MM-DD');
+    }
+    console.log(state, stateTimeSeries[state], resultSeries);
+    setresultSeries(resultSeries);
   };
 
   return (
@@ -86,6 +152,14 @@ function Home(props) {
           summary={false}
           onHighlightState={onHighlightState}
           stateDistrictWiseData={stateDistrictWiseData}
+        />
+        <TimeSeries
+          key={'state'}
+          timeseries={resultSeries}
+          confirmedOnly={true}
+          update={1}
+          type={graphOption}
+          mode={timeseriesMode}
         />
       </div>
 

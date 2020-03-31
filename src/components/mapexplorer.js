@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useMemo} from 'react';
 import ChoroplethMap, {highlightRegionInMap} from './choropleth';
 import {MAP_TYPES, MAPS_DIR} from '../constants';
+import {TransformWrapper, TransformComponent} from 'react-zoom-pan-pinch';
 
 const mapMeta = {
   India: {
@@ -469,13 +470,28 @@ export default function ({states, stateDistrictWiseData, stateHighlighted}) {
         ) : null}
       </div>
 
-      <ChoroplethMap
-        statistic={statistic}
-        mapMeta={currentMap}
-        mapData={currentMapData}
-        setHoveredRegion={(region) => setHoveredRegion(region, currentMap)}
-        changeMap={switchMapToState}
-      />
+      <TransformWrapper>
+        {({zoomIn, zoomOut, resetTransform, ...rest}) => (
+          <React.Fragment>
+            <div className="tools">
+              <button onClick={zoomIn}>+</button>
+              <button onClick={zoomOut}>-</button>
+              <button onClick={resetTransform}>x</button>
+            </div>
+            <TransformComponent>
+              <ChoroplethMap
+                statistic={statistic}
+                mapMeta={currentMap}
+                mapData={currentMapData}
+                setHoveredRegion={(region) =>
+                  setHoveredRegion(region, currentMap)
+                }
+                changeMap={switchMapToState}
+              />
+            </TransformComponent>
+          </React.Fragment>
+        )}
+      </TransformWrapper>
     </div>
   );
 }
