@@ -100,8 +100,8 @@ function Home(props) {
     let total = 0;
     let dateStr = '2020-01-30';
     let date = moment(dateStr);
-    const today = moment().format('YYYY-MM-DD');
-    while (dateStr !== today) {
+    const tomorrow = moment().add(1, 'days').format('YYYY-MM-DD');
+    while (dateStr !== tomorrow) {
       const num = series[dateStr] || 0;
       total += num;
       resultSeries.push({
